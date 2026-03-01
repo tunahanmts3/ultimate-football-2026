@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultimate Football 2026</title>
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(180deg,#021,#063);
+color:white;
+text-align:center;
+overflow:hidden;
+}
+
+.screen{display:none;padding:20px}
+button{
+padding:10px 15px;
+margin:6px;
+border:none;
+border-radius:12px;
+font-size:15px;
+background:#1e90ff;
+color:white;
+}
+button:hover{background:#00bfff}
+canvas{
+background:#0a5c0a;
+border:3px solid white;
+margin-top:10px;
+}
+
+.hud{
+display:flex;
+justify-content:space-between;
+padding:5px 20px;
+font-size:18px;
+}
+
+.card{
+background:#111;
+padding:10px;
+border-radius:10px;
+margin:10px;
+}
+</style>
+</head>
+<body>
+
+<h1>Ultimate Football 2026</h1>
+
+<div id="menu" class="screen">
+<button onclick="openTeam()">Hızlı Maç</button>
+<button onclick="careerMode()">Kariyer</button>
+<button onclick="openPack()">Paket Aç</button>
+</div>
+
+<div id="team" class="screen">
+<h2>Takım Seç</h2>
+<button onclick="selectTeam('blue')">Mavi</button>
+<button onclick="selectTeam('red')">Kırmızı</button>
+<button onclick="selectTeam('yellow')">Sarı</button>
+</div>
+
+<div id="career" class="screen">
+<h2>Kariyer</h2>
+<p>Sezon: <span id="season">1</span></p>
+<p>Puan: <span id="points">0</span></p>
+<p>Para: $<span id="money">0</span></p>
+<p>Güç: <span id="power">1</span></p>
+<button onclick="startMatch()">Maça Başla</button>
+<button onclick="upgrade()">Güç Artır ($20)</button>
+<button onclick="transfer()">Transfer Al ($40)</button>
+<button onclick="backMenu()">Menü</button>
+</div>
+
+<div id="pack" class="screen">
+<h2>Paket Aç ($30)</h2>
+<button onclick="buyPack()">Paket Aç</button>
+<div id="packResult"></div>
+<button onclick="backMenu()">Menü</button>
+</div>
+
+<div id="game" class="screen">
+<div class="hud">
+<div id="score">0 - 0</div>
+<div id="timer">60</div>
+</div>
+<canvas id="canvas"></canvas>
+<div>
+<button onclick="move('up')">⬆</button>
+<button onclick="move('left')">⬅</button>
+<button onclick="move('down')">⬇</button>
+<button onclick="move('right')">➡</button>
+<button onclick="shoot()">ŞUT</button>
+</div>
+</div>
+
+<script>
+let screen=(id)=>{
+document.querySelectorAll(".screen").forEach(s=>s.style.display="none");
+document.getElementById(id).style.display="block";
+}
+screen("menu");
+
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+canvas.width=400;
+canvas.height=600;
+
+let player,enemy,ball;
+let playerScore=0,enemyScore=0,time=60;
+let selectedColor="blue";
+let season=1,points=0,money=50,power=1;
+let interval;
+
+function openTeam(){screen("team")}
+function careerMode(){screen("career")}
+function openPack(){screen("pack")}
+function backMenu(){screen("menu")}
+
+function selectTeam(c){selectedColor=c;startMatch();}
+
+function startMatch(){
+screen("game");
+player={x:200,y:500,size:20};
+enemy={x:200,y:100,size:20};
+ball={x:200,y:300,size:10,dx:0,dy:0};
+playerScore=0;enemyScore=0;time=60;
+
+interval=setInterval(()=>{
+time--;
+document.getElementById("timer").innerText=time;
+if(time<=0)endMatch();
+},1000);
+
+draw();
+}
+
+function endMatch(){
+clearInterval(interval);
+screen("career");
+
+if(playerScore>enemyScore){
+points+=3;
+money+=20;
+}else{
+money+=5;
+}
+season++;
+updateStats();
+}
+
+function updateStats(){
+document.getElementById("season").innerText=season;
+document.getElementById("points").innerText=points;
+document.getElementById("money").innerText=money;
+document.getElementById("power").innerText=power;
+}
+
+function upgrade(){
+if(money>=20){money-=20;power++;updateStats();}
+}
+
+function transfer(){
+if(money>=40){money-=40;power+=2;updateStats();}
+}
+
+function buyPack(){
+if(money>=30){
+money-=30;
+let boost=Math.floor(Math.random()*3)+1;
+power+=boost;
+document.getElementById("packResult").innerHTML=
+"<div class='card'>Yeni Oyuncu Kartı! +" + boost + " Güç</div>";
+updateStats();
+}
+}
+
+function drawField(){
+ctx.strokeStyle="white";
+ctx.strokeRect(50,0,300,600);
+ctx.beginPath();
+ctx.moveTo(50,300);
+ctx.lineTo(350,300);
+ctx.stroke();
+}
+
+function drawCircle(o,c){
+ctx.beginPath();
+ctx.arc(o.x,o.y,o.size,0,Math.PI*2);
+ctx.fillStyle=c;
+ctx.fill();
+}
+
+function draw(){
+ctx.clearRect(0,0,400,600);
+drawField();
+
+drawCircle(player,selectedColor);
+drawCircle(enemy,"black");
+drawCircle(ball,"white");
+
+ball.x+=ball.dx;
+ball.y+=ball.dy;
+ball.dx*=0.98;
+ball.dy*=0.98;
+
+if(enemy.x<ball.x)enemy.x+=2+season*0.3;
+if(enemy.x>ball.x)enemy.x-=2+season*0.3;
+
+if(ball.y<=0 && ball.x>150 && ball.x<250){
+playerScore++;
+money+=5;
+resetBall();
+}
+
+if(ball.y>=600 && ball.x>150 && ball.x<250){
+enemyScore++;
+resetBall();
+}
+
+document.getElementById("score").innerText=playerScore+" - "+enemyScore;
+requestAnimationFrame(draw);
+}
+
+function move(d){
+if(d==="up")player.y-=10;
+if(d==="down")player.y+=10;
+if(d==="left")player.x-=10;
+if(d==="right")player.x+=10;
+}
+
+function shoot(){
+ball.dx=(enemy.x-ball.x)/10;
+ball.dy=-7-power;
+}
+
+function resetBall(){
+ball={x:200,y:300,size:10,dx:0,dy:0};
+}
+</script>
+
+</body>
+</html>
